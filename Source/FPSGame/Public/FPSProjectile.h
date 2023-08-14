@@ -9,7 +9,6 @@
 
 class UProjectileMovementComponent;
 class USphereComponent;
-class UParticleSystem;
 
 
 UCLASS()
@@ -20,27 +19,16 @@ class AFPSProjectile : public AActor
 protected:
 
 	/** Sphere collision component */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category= "Components")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category= "Projectile")
 	USphereComponent* CollisionComp;
 
 	/** Projectile movement component */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
 	UProjectileMovementComponent* ProjectileMovement;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
-	UParticleSystem* ExplosionFX;
-
-	UFUNCTION()
-	void Explode();
-
-	UFUNCTION(BlueprintImplementableEvent)
-	void BlueprintExplode();
 
 public:
 
 	AFPSProjectile();
-
-	virtual void BeginPlay() override;
 
 	/** called when projectile hits something */
 	UFUNCTION()

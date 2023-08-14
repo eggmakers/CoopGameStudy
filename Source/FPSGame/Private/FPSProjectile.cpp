@@ -3,8 +3,6 @@
 #include "FPSProjectile.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Components/SphereComponent.h"
-#include "Kismet/GameplayStatics.h"
-#include "TimerManager.h"
 
 AFPSProjectile::AFPSProjectile() 
 {
@@ -28,57 +26,19 @@ AFPSProjectile::AFPSProjectile()
 	ProjectileMovement->MaxSpeed = 3000.f;
 	ProjectileMovement->bRotationFollowsVelocity = true;
 	ProjectileMovement->bShouldBounce = true;
-}
 
-
-void AFPSProjectile::BeginPlay()
-{
-	Super::BeginPlay();
-
-	FTimerHandle TimerHandle;
-	GetWorldTimerManager().SetTimer(TimerHandle, this, &AFPSProjectile::Explode, 3.0f, false);
-}
-
-void AFPSProjectile::Explode()
-{
-	UGameplayStatics::SpawnEmitterAtLocation(this, ExplosionFX, GetActorLocation(), FRotator::ZeroRotator, FVector(5.0f));
-
-	// Allow BP to trigger additional logic
-	BlueprintExplode();
-
-	Destroy();
+	// Die after 3 seconds by default
+	InitialLifeSpan = 3.0f;
 }
 
 
 void AFPSProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
-	// Only add impulse and destroy projectile if we hit a physics object
-	if ((OtherActor != nullptr) && (OtherActor != this) && (OtherComp != nullptr) && OtherComp->IsSimulatingPhysics())
+	// Only add impulse and destroy projectile if we hit a physics
+	if ((OtherActor != NULL) && (OtherActor != this) && (OtherComp != NULL) && OtherComp->IsSimulatingPhysics())
 	{
-		float RandomIntensity = FMath::RandRange(200.0f, 500.0f);
+		OtherComp->AddImpulseAtLocation(GetVelocity() * 100.0f, GetActorLocation());
 
-		OtherComp->AddImpulseAtLocation(GetVelocity() * RandomIntensity, GetActorLocation());
-
-		FVector Scale = OtherComp->GetComponentScale();
-		Scale *= 0.8f;
-
-		if (Scale.GetMin() < 0.5f)
-		{
-			OtherActor->Destroy();
-		}
-		else
-		{
-			OtherComp->SetWorldScale3D(Scale);
-		}
-
-		UMaterialInstanceDynamic* MatInst = OtherComp->CreateDynamicMaterialInstance(0);
-		if (MatInst)
-		{
-			FLinearColor NewColor = FLinearColor::MakeRandomColor();
-
-			MatInst->SetVectorParameterValue("Color", NewColor);
-		}
-
-		Explode();
+		Destroy();
 	}
 }
