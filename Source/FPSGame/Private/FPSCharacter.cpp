@@ -2,6 +2,7 @@
 
 #include "FPSCharacter.h"
 #include "FPSProjectile.h"
+#include "UnrealNetwork.h"
 #include "Animation/AnimInstance.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -49,8 +50,24 @@ void AFPSCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 }
 
 
+void AFPSCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	if (!IsLocallyControlled())
+	{
+		FRotator NewRot = CameraComponent->GetRelativeRotation();
+		NewRot.Pitch = RemoteViewPitch * 360.f / 255.f;
+
+		CameraComponent->SetRelativeRotation(NewRot);
+	}
+}
+
+
 void AFPSCharacter::Fire()
 {
+	ServerFire();
+
 	// try and fire a projectile
 	if (ProjectileClass)
 	{
@@ -59,7 +76,8 @@ void AFPSCharacter::Fire()
 
 		//Set Spawn Collision Handling Override
 		FActorSpawnParameters ActorSpawnParams;
-		ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
+		ActorSpawnParams.SpawnCollisionHandlingOverride =
+			ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
 		ActorSpawnParams.Instigator = this;
 
 		// spawn the projectile at the muzzle
@@ -85,6 +103,29 @@ void AFPSCharacter::Fire()
 }
 
 
+void AFPSCharacter::ServerFire_Implementation()
+{
+	if (ProjectileClass)
+	{
+		FVector MuzzleLocation = GunMeshComponent->GetSocketLocation("Muzzle");
+		FRotator MuzzleRotation = GunMeshComponent->GetSocketRotation("Muzzle");
+
+		FActorSpawnParameters ActorSpawnParams;
+		ActorSpawnParams.SpawnCollisionHandlingOverride =
+			ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
+		ActorSpawnParams.Instigator = this;
+
+		GetWorld()->SpawnActor<AFPSProjectile>(ProjectileClass, MuzzleLocation, MuzzleRotation, ActorSpawnParams);
+	}
+}
+
+
+bool AFPSCharacter::ServerFire_Validate()
+{
+	return true;
+}
+
+
 void AFPSCharacter::MoveForward(float Value)
 {
 	if (Value != 0.0f)
@@ -102,4 +143,14 @@ void AFPSCharacter::MoveRight(float Value)
 		// add movement in that direction
 		AddMovementInput(GetActorRightVector(), Value);
 	}
+}
+
+
+void AFPSCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AFPSCharacter, bIsCarryingObjective);
+
+	// DOREPLIFETIME_CONDITION(AFPSCharacter, bIsCarryingObjective, COND_OwnerOnly);
 }
